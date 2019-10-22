@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import sys,isodate,time,threading,os
+import sys,isodate,time,threading,os,random
 from googleapiclient.discovery import build
 from oauth2client import file, client, tools
 from httplib2 import Http
@@ -34,10 +34,12 @@ def pages(service,request,follow=True): #TODO return items
 def fetch(threads):
   for thread in pages(comments,comments.list(
   part='snippet,replies',videoId=sys.argv[1],textFormat='plainText',maxResults=50,order='relevance')):
-    threads.append(thread['snippet']['topLevelComment'])
+    t=[]
+    t.append(thread['snippet']['topLevelComment'])
     if 'replies' in thread:
       for r in thread['replies']['comments']:
-        threads.append(r)
+        t.append(r)
+    threads.append(t)
 def display(threads):
   while(len(threads)==0):
     os.system('clear')
@@ -47,11 +49,14 @@ def display(threads):
   delay=duration/comments
   if delay<MINDELAY:
     delay=MINDELAY
-  while(len(threads)>0):
-    t=threads.pop(0)
+  current=[]
+  while len(threads)>0 or len(current)>0:
+    if len(current)==0:
+      current=threads.pop(random.randrange(len(threads)))
+    t=current.pop(0)
     os.system('clear')
     if DEBUG:
-      print(f'Duration: {round(duration/60)}m.')
+      print(f'Duration: {round(duration/60)}m ({round(duration/60**2)}h).')
       print(f'Total coments: {comments}.')
       print(f'Delay: {round(delay)}s ({round(delay/60)}m).')
       print()
