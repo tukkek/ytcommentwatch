@@ -5,7 +5,8 @@ from oauth2client import file, client, tools
 from httplib2 import Http
 
 DEBUG=False
-MINDELAY=9
+WORDSPERSECOND=200/60
+SECONDSPERWORD=1/WORDSPERSECOND
 
 if len(sys.argv)<2:
   print(f'Usage: {sys.argv[0]} videoid')
@@ -47,8 +48,6 @@ def display(threads):
   duration=isodate.parse_duration(video['contentDetails']['duration']).total_seconds()
   comments=int(video['statistics']['commentCount'])
   delay=duration/comments
-  if delay<MINDELAY:
-    delay=MINDELAY
   current=[]
   while len(threads)>0 or len(current)>0:
     if len(current)==0:
@@ -64,8 +63,10 @@ def display(threads):
       print(f'Total coments: {comments}.')
       print(f'Delay: {round(delay)}s ({round(delay/60)}m).')
       print()
-    print(t['snippet']['textDisplay'])
-    time.sleep(delay)
+    comment=t['snippet']['textDisplay']
+    print(comment)
+    readingtime=len(comment.split(' '))*SECONDSPERWORD
+    time.sleep(readingtime if readingtime>delay else delay)
     
 service=get_authenticated_service()
 videosservice=service.videos()
