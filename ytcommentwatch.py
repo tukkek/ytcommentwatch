@@ -52,7 +52,11 @@ def display(threads):
   current=[]
   while len(threads)>0 or len(current)>0:
     if len(current)==0:
-      current=threads.pop(random.randrange(len(threads)))
+      #earlier comments are more relevant
+      #choose randomly but prefer early ones
+      a=random.randrange(len(threads))
+      b=random.randrange(len(threads))
+      current=threads.pop(a if a<b else b)
     t=current.pop(0)
     os.system('clear')
     if DEBUG:
