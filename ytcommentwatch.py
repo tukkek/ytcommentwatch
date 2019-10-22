@@ -4,6 +4,9 @@ from googleapiclient.discovery import build
 from oauth2client import file, client, tools
 from httplib2 import Http
 
+DEBUG=False
+MINDELAY=9
+
 if len(sys.argv)<2:
   print(f'Usage: {sys.argv[0]} videoid')
   sys.exit(1)
@@ -29,7 +32,8 @@ def pages(service,request,follow=True): #TODO return items
       return
     request=service.list_next(request,response)
 def fetch(threads):
-  for thread in pages(comments,comments.list(part='snippet,replies',videoId=sys.argv[1],textFormat='plainText',maxResults=50)):
+  for thread in pages(comments,comments.list(
+  part='snippet,replies',videoId=sys.argv[1],textFormat='plainText',maxResults=50,order='relevance')):
     threads.append(thread['snippet']['topLevelComment'])
     if 'replies' in thread:
       for r in thread['replies']['comments']:
@@ -41,13 +45,16 @@ def display(threads):
   duration=isodate.parse_duration(video['contentDetails']['duration']).total_seconds()
   comments=int(video['statistics']['commentCount'])
   delay=duration/comments
-  delay=3
+  if delay<MINDELAY:
+    delay=MINDELAY
   while(len(threads)>0):
     t=threads.pop(0)
     os.system('clear')
-    print(f'Total coments: {comments}.')
-    print(f'Delay: {round(delay*1000)}s')
-    print()
+    if DEBUG:
+      print(f'Duration: {round(duration/60)}m.')
+      print(f'Total coments: {comments}.')
+      print(f'Delay: {round(delay)}s ({round(delay/60)}m).')
+      print()
     print(t['snippet']['textDisplay'])
     time.sleep(delay)
     
