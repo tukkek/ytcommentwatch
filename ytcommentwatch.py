@@ -1,16 +1,16 @@
 #!/usr/bin/python3
-import sys,isodate,time,threading,os,random
+import sys,isodate,time,threading,os,random,urllib,tempfile
 from googleapiclient.discovery import build
 from oauth2client import file, client, tools
 from httplib2 import Http
 
+if len(sys.argv)<2:
+  print(f'Usage: {sys.argv[0]} videoId')
+  sys.exit(1)
+  
 DEBUG=False
 WORDSPERSECOND=200/60
 SECONDSPERWORD=1/WORDSPERSECOND
-
-if len(sys.argv)<2:
-  print(f'Usage: {sys.argv[0]} videoid')
-  sys.exit(1)
 
 def get_authenticated_service():
   store=file.Storage('credentials.json')
@@ -34,7 +34,7 @@ def pages(service,request,follow=True): #TODO return items
     request=service.list_next(request,response)
 def fetch(threads):
   for thread in pages(comments,comments.list(
-  part='snippet,replies',videoId=sys.argv[1],textFormat='plainText',maxResults=50,order='relevance')):
+  part='snippet,replies',videoId=videoid,textFormat='plainText',maxResults=50,order='relevance')):
     t=[]
     t.append(thread['snippet']['topLevelComment'])
     if 'replies' in thread:
@@ -57,24 +57,35 @@ def display(threads):
       b=random.randrange(len(threads))
       current=threads.pop(a if a<b else b)
     t=current.pop(0)
-    os.system('clear')
-    if DEBUG:
-      print(f'Duration: {round(duration/60)}m ({round(duration/60**2)}h).')
-      print(f'Total coments: {comments}.')
-      print(f'Delay: {round(delay)}s ({round(delay/60)}m).')
-      print()
     comment=t['snippet']['textDisplay']
-    print(comment)
     readingtime=len(comment.split(' '))*SECONDSPERWORD
+    path=False
+    with tempfile.NamedTemporaryFile(delete=False,mode='w') as tmp:
+      if DEBUG:
+        print(f'Duration: {round(duration/60)}m ({round(duration/60**2)}h).',file=tmp)
+        print(f'Total coments: {comments}.',file=tmp)
+        print(f'Delay: {round(delay)}s ({round(delay/60)}m).',file=tmp)
+        print()
+      print(comment,file=tmp)
+      path=tmp.name
+    os.system('clear')
+    os.system(f'fold -s -w `tput cols` {path}')
     time.sleep(readingtime if readingtime>delay else delay)
     
 service=get_authenticated_service()
 videosservice=service.videos()
 comments=service.commentThreads()
 threads=[]
-
+videoid=sys.argv[1]
 video=False
-for v in pages(videosservice,videosservice.list(part='contentDetails,statistics',id=sys.argv[1],maxResults=1)):
+
+if 'youtube.com' in videoid:
+  videoid=urllib.parse.urlparse(videoid).query
+  videoid=urllib.parse.parse_qs(videoid)['v'][0]
+elif 'youtu.be' in videoid:
+  videoid=urllib.parse.urlparse(videoid).path.replace('/','')
+
+for v in pages(videosservice,videosservice.list(part='contentDetails,statistics',id=videoid,maxResults=1)):
   video=v
   break
 f=threading.Thread(target=fetch,args=[threads])
