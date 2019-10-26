@@ -19,6 +19,7 @@ def get_authenticated_service():
       flow=client.flow_from_clientsecrets('client_secret.json', ['https://www.googleapis.com/auth/youtube.force-ssl'])
       creds=tools.run_flow(flow,store,tools.argparser.parse_args(args=[]))
   return build('youtube','v3',http=creds.authorize(Http()))
+
 def pages(service,request,follow=True): #TODO return items
   i=0
   while request:
@@ -32,6 +33,7 @@ def pages(service,request,follow=True): #TODO return items
     if not follow:
       return
     request=service.list_next(request,response)
+    
 def fetch(threads):
   for thread in pages(comments,comments.list(
   part='snippet,replies',videoId=videoid,textFormat='plainText',maxResults=50,order='relevance')):
@@ -41,6 +43,21 @@ def fetch(threads):
       for r in thread['replies']['comments']:
         t.append(r)
     threads.append(t)
+    
+def consume(threads): #skip repeats from yt api
+  current=[]
+  read=set() 
+  while len(threads)>0 or len(current)>0:
+    if len(current)==0:
+      a=random.randrange(len(threads))
+      b=random.randrange(len(threads))
+      current=threads.pop(a if a<b else b)
+    comment=current.pop(0)['snippet']['textDisplay']
+    h=hash(comment)
+    if h not in read:
+      read.add(h)
+      yield comment
+    
 def display(threads):
   while(len(threads)==0):
     os.system('clear')
@@ -48,16 +65,7 @@ def display(threads):
   duration=isodate.parse_duration(video['contentDetails']['duration']).total_seconds()
   comments=int(video['statistics']['commentCount'])
   delay=duration/comments
-  current=[]
-  while len(threads)>0 or len(current)>0:
-    if len(current)==0:
-      #earlier comments are more relevant
-      #choose randomly but prefer early ones
-      a=random.randrange(len(threads))
-      b=random.randrange(len(threads))
-      current=threads.pop(a if a<b else b)
-    t=current.pop(0)
-    comment=t['snippet']['textDisplay']
+  for comment in consume(threads):
     readingtime=len(comment.split(' '))*SECONDSPERWORD
     path=False
     with tempfile.NamedTemporaryFile(delete=False,mode='w') as tmp:
