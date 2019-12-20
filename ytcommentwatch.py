@@ -9,7 +9,7 @@ if len(sys.argv)<2:
   sys.exit(1)
   
 DEBUG=False
-WORDSPERSECOND=200/60
+WORDSPERSECOND=(200/60)/2
 SECONDSPERWORD=1/WORDSPERSECOND
 
 def get_authenticated_service():
@@ -26,8 +26,10 @@ def pages(service,request,follow=True): #TODO return items
     try:
       response=request.execute()
     except Exception as e:
-      print(e)
-      continue
+      #print(e)
+      #continue
+      print('error') #TODO workaround for API error 400
+      return 
     for item in response['items']:
       yield item
     if not follow:
