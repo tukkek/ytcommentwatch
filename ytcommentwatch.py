@@ -80,14 +80,20 @@ def display(threads):
       path=tmp.name
     os.system('clear')
     os.system(f'fold -s -w `tput cols` {path}')
-    time.sleep(readingtime if readingtime>delay else delay)
-    
+    global sleepfor
+    sleepfor=readingtime if readingtime>delay else delay
+    while sleepfor>0:
+      time.sleep(1)
+      sleepfor-=1
+
 service=get_authenticated_service()
 videosservice=service.videos()
 comments=service.commentThreads()
 threads=[]
 videoid=sys.argv[1]
 video=False
+sleepfor=0
+processes=[] #actually threads
 
 if 'youtube.com' in videoid:
   videoid=urllib.parse.urlparse(videoid).query
@@ -98,9 +104,21 @@ elif 'youtu.be' in videoid:
 for v in pages(videosservice,videosservice.list(part='contentDetails,statistics',id=videoid,maxResults=1)):
   video=v
   break
-f=threading.Thread(target=fetch,args=[threads])
-d=threading.Thread(target=display,args=[threads])
-f.start()
-d.start()
-f.join()
-d.join()
+processes.append(threading.Thread(target=fetch,args=[threads]))
+processes.append(threading.Thread(target=display,args=[threads]))
+
+try:
+  from pynput import keyboard
+  def shownext(key):
+      if key==keyboard.Key.enter: 
+        global sleepfor
+        sleepfor=0
+  processes.append(keyboard.Listener(on_press=shownext))
+except Exception as e:
+  pass #optional dependency TODO write readme
+
+for p in processes:
+  p.start()
+for p in processes:
+  p.join()
+  
