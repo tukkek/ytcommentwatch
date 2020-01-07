@@ -110,7 +110,7 @@ processes.append(threading.Thread(target=display,args=[threads]))
 try:
   from pynput import keyboard
   def shownext(key):
-      if key==keyboard.Key.enter: 
+      if key in [keyboard.Key.enter,keyboard.Key.space]: 
         global sleepfor
         sleepfor=0
   processes.append(keyboard.Listener(on_press=shownext))
